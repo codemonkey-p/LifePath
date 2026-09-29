@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>LifePath</title>
+<link rel="stylesheet" href="/css/style.css">
+<link rel="manifest" href="/manifest.json">
+<link rel="icon" href="/icons/icon.svg" type="image/svg+xml">
+</head>
+<body>
+<div class="screen">
+  <div class="app-header">
+    <div class="logo with-icon">
+      <img src="/icons/icon.svg" alt="" class="logo-icon">
+      <span><span class="life">Life</span><span class="path">Path</span></span>
+    </div>
+    <div class="tagline">Guiding You Through Each Day</div>
+  </div>
+
+  <div class="card">
+    <button class="btn" id="wizard-btn">Tell me about yourself</button>
+    <button class="btn secondary" id="brain-btn">Brain Exercises</button>
+    <button class="btn" id="shopping-btn">Shopping List</button>
+    <button class="btn outline" id="profile-btn">Your Profile</button>
+    <button class="logout-btn" id="logout-btn">Log Out</button>
+  </div>
+</div>
+
+<script src="/js/realtime-voice-client.js"></script>
+<script src="/js/app.js"></script>
+<script>
+  let wizardLabel = document.getElementById('wizard-btn');
+
+  document.getElementById('brain-btn').addEventListener('click', () => window.location.href = '/brainExercises.html');
+  document.getElementById('profile-btn').addEventListener('click', () => window.location.href = '/profile.html');
+  document.getElementById('shopping-btn').addEventListener('click', () => window.location.href = '/shopping.html');
+  document.getElementById('wizard-btn').addEventListener('click', () => window.location.href = '/wizard.html');
+  document.getElementById('logout-btn').addEventListener('click', async () => {
+    await fetch('/api/logout', { method: 'POST' });
+    window.location.href = '/index.html';
+  });
+
+  async function refreshWizardLabel() {
+    const res = await fetch('/api/wizard/status');
+    if (!res.ok) return;
+    const status = await res.json();
+    wizardLabel.textContent = status.hasStarted ? 'Tell me more about yourself' : 'Tell me about yourself';
+  }
+
+  async function redirectToWizardIfFirstLogin() {
+    const meRes = await fetch('/api/me');
+    console.log(`[client-home] /api/me check on home.html load: status=${meRes.status} ok=${meRes.ok}`);
+    if (!meRes.ok) {
+      console.log('[client-home] not logged in (or session cookie not sent) - redirecting BACK to /index.html');
+      window.location.href = '/index.html';
+      return;
+    }
+    const me = await meRes.json();
+    console.log('[client-home] logged in as', me.email, '- firstLoginCompleted:', me.firstLoginCompleted);
+    if (!me.firstLoginCompleted) {
+      window.location.href = '/wizard.html';
+      return;
+    }
+    refreshWizardLabel();
+  }
+
+  redirectToWizardIfFirstLogin();
+</script>
+</body>
+</html>

@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>LifePath</title>
+<link rel="stylesheet" href="/css/style.css">
+<link rel="manifest" href="/manifest.json">
+</head>
+<body>
+<div class="screen">
+  <div class="app-header">
+    <div class="logo">Brain Exercises</div>
+  </div>
+  <div class="card">
+    <button class="btn" id="quiz-btn">Quick Quiz</button>
+    <p style="color: var(--text-muted); font-size: 15px; margin: -8px 0 20px;">A voice quiz about you and your family.</p>
+    <button class="btn" id="family-quiz-btn">Family Quiz</button>
+    <p style="color: var(--text-muted); font-size: 15px; margin: -8px 0 20px;">Pictures and birthdays of your family - tap the right answer.</p>
+    <button class="btn secondary" id="game-btn">Game</button>
+    <p style="color: var(--text-muted); font-size: 15px; margin: -8px 0 0;">Choose from a list of easy memory games - tap only, no talking needed.</p>
+  </div>
+  <button class="back-btn" onclick="window.location.href='/home.html'">Back to Home</button>
+</div>
+<script src="/js/realtime-voice-client.js"></script>
+<script src="/js/app.js"></script>
+<script>
+  document.getElementById('quiz-btn').addEventListener('click', () => window.location.href = '/quiz.html');
+  document.getElementById('family-quiz-btn').addEventListener('click', () => window.location.href = '/familyQuiz.html');
+  document.getElementById('game-btn').addEventListener('click', () => window.location.href = '/games.html');
+</script>
+</body>
+</html>

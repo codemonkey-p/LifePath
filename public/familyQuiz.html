@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>LifePath</title>
+<link rel="stylesheet" href="/css/style.css">
+<link rel="manifest" href="/manifest.json">
+</head>
+<body class="game-page">
+<div class="screen">
+  <div class="app-header">
+    <div class="logo">Family Quiz</div>
+    <div class="tagline" id="round-label"></div>
+  </div>
+  <div class="card" id="stage"></div>
+  <button class="btn outline" onclick="window.location.href='/brainExercises.html'">Back to Brain Exercises</button>
+</div>
+
+<script src="/js/realtime-voice-client.js"></script>
+<script src="/js/app.js"></script>
+<script src="/js/game-kit.js"></script>
+<script>
+  const { PRAISE, RETRY, sample, shuffle, pick, el, button, showResult } = GameKit;
+  const MAX_QUESTIONS = 6;
+  const MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+  const DAYS_IN_MONTH = [31, 29, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
+  const stage = document.getElementById('stage');
+  const roundLabel = document.getElementById('round-label');
+  let family = [];
+  let score;
+
+  // Birthdays are "YYYY-MM-DD" or "MM-DD"; only the month and day matter here.
+  function birthdayLabel(value) {
+    const m = String(value || '').match(/^(?:(\d{4})-)?(\d{1,2})-(\d{1,2})$/);
+    if (!m) return null;
+    const month = parseInt(m[2], 10);
+    const day = parseInt(m[3], 10);
+    if (month < 1 || month > 12 || day < 1 || day > 31) return null;
+    return `${MONTHS[month - 1]} ${day}`;
+  }
+
+  function randomDate() {
+    const month = Math.floor(Math.random() * 12);
+    return `${MONTHS[month]} ${1 + Math.floor(Math.random() * DAYS_IN_MONTH[month])}`;
+  }
+
+  function photoUrl(member) {
+    return member.photoFilename ? `/api/profile/family/${member.id}/photo` : null;
+  }
+
+  function buildQuestions() {
+    const names = [...new Set(family.map((m) => m.name))];
+    const pool = [];
+
+    if (names.length >= 2) {
+      family.filter((m) => m.photoFilename).forEach((m) => {
+        const others = sample(names.filter((n) => n !== m.name), 3);
+        pool.push({
+          member: m,
+          prompt: 'Who is this?',
+          image: true,
+          correct: m.name,
+          choices: shuffle([m.name, ...others]),
+          praise: `That's right - it's ${m.name}!`
+        });
+      });
+    }
+
+    family.filter((m) => birthdayLabel(m.birthday)).forEach((m) => {
+      const correct = birthdayLabel(m.birthday);
+      const wrong = new Set();
+      while (wrong.size < 3) {
+        const d = randomDate();
+        if (d !== correct) wrong.add(d);
+      }
+      pool.push({
+        member: m,
+        prompt: `When is ${m.name}'s birthday?`,
+        image: true,
+        correct,
+        choices: shuffle([correct, ...wrong]),
+        praise: `That's right - ${m.name}'s birthday is ${correct}!`
+      });
+    });
+
+    return sample(pool, MAX_QUESTIONS);
+  }
+
+  function showMessage(text, actionLabel, actionHref) {
+    roundLabel.textContent = '';
+    stage.replaceChildren(el('p', 'game-prompt', text));
+    if (actionLabel) stage.appendChild(button(actionLabel, 'btn secondary', () => { window.location.href = actionHref; }));
+  }
+
+  function start() {
+    score = 0;
+    const questions = buildQuestions();
+    if (questions.length === 0) {
+      showMessage(
+        'To play, add family members with a photo or a birthday on your Profile first.',
+        'Go to My Profile',
+        '/profile.html'
+      );
+      return;
+    }
+    ask(questions, 0);
+  }
+
+  function ask(questions, index) {
+    if (index >= questions.length) { roundLabel.textContent = ''; return showResult(stage, score, questions.length, start); }
+    const q = questions[index];
+    roundLabel.textContent = `Question ${index + 1} of ${questions.length}`;
+
+    const prompt = el('p', 'game-prompt', q.prompt);
+    const url = photoUrl(q.member);
+    let picture;
+    if (url) {
+      picture = el('img', 'quiz-photo');
+      picture.alt = '';
+      picture.src = url;
+      picture.onerror = () => picture.replaceWith(el('div', 'quiz-photo', '🎂'));
+    } else {
+      picture = el('div', 'quiz-photo', '🎂');
+    }
+
+    const slot = el('div', 'quiz-slot');
+    const message = el('p', 'game-message', '');
+    slot.appendChild(message);
+
+    const choiceButtons = [];
+    let firstTry = true;
+    q.choices.forEach((choice) => {
+      const b = button(choice, 'btn outline quiz-choice', () => {
+        if (choice === q.correct) {
+          if (firstTry) score += 1;
+          choiceButtons.forEach((cb) => { cb.disabled = true; });
+          b.classList.add('right');
+          prompt.textContent = q.praise;
+          slot.replaceChildren(button(index + 1 === questions.length ? 'Finish' : 'Next', 'btn', () => ask(questions, index + 1)));
+        } else {
+          firstTry = false;
+          b.disabled = true;
+          b.classList.add('wrong');
+          message.textContent = pick(RETRY);
+        }
+      });
+      choiceButtons.push(b);
+    });
+
+    stage.replaceChildren(prompt, picture, ...choiceButtons, slot);
+  }
+
+  async function load() {
+    const res = await fetch('/api/profile');
+    if (!res.ok) { window.location.href = '/index.html'; return; }
+    const data = await res.json();
+    family = data.profile.family || [];
+    start();
+  }
+
+  load();
+</script>
+</body>
+</html>

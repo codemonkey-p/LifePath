@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>LifePath</title>
+<link rel="stylesheet" href="/css/style.css">
+<link rel="manifest" href="/manifest.json">
+</head>
+<body class="game-page">
+<div class="screen">
+  <div class="app-header">
+    <div class="logo">What's Missing?</div>
+    <div class="tagline" id="round-label"></div>
+  </div>
+  <div class="card" id="stage"></div>
+  <button class="btn outline" onclick="window.location.href='/games.html'">Back to Games</button>
+</div>
+
+<script src="/js/realtime-voice-client.js"></script>
+<script src="/js/app.js"></script>
+<script src="/js/game-kit.js"></script>
+<script>
+  const { ITEMS, PRAISE, RETRY, sample, shuffle, pick, el, button, showResult } = GameKit;
+  const ROUNDS = 5;
+  const stage = document.getElementById('stage');
+  const roundLabel = document.getElementById('round-label');
+  let round, score;
+
+  function start() { round = 0; score = 0; nextRound(); }
+
+  function nextRound() {
+    round += 1;
+    if (round > ROUNDS) { roundLabel.textContent = ''; return showResult(stage, score, ROUNDS, start); }
+    roundLabel.textContent = `Round ${round} of ${ROUNDS}`;
+
+    const set = sample(ITEMS, 4);
+    const missing = pick(set);
+    const remaining = set.filter((s) => s !== missing);
+
+    stage.replaceChildren(el('p', 'game-prompt', 'Look carefully at these. Take your time.'));
+    const board = el('div', 'item-grid');
+    set.forEach((s) => board.appendChild(el('div', 'item-tile', s)));
+    stage.appendChild(board);
+    stage.appendChild(button("I'm ready", 'btn', () => ask(missing, remaining, set)));
+  }
+
+  function ask(missing, remaining, set) {
+    stage.replaceChildren(el('p', 'game-prompt', 'One of them has gone! Which one was it?'));
+    const board = el('div', 'item-grid four');
+    remaining.forEach((s) => board.appendChild(el('div', 'item-tile dim', s)));
+    board.appendChild(el('div', 'item-tile empty', '?'));
+    stage.appendChild(board);
+
+    const options = shuffle([missing, ...sample(ITEMS.filter((s) => !set.includes(s)), 2)]);
+    const choices = el('div', 'item-grid three');
+    const message = el('p', 'game-message', '');
+    let firstTry = true;
+    options.forEach((s) => {
+      const btn = el('button', 'item-tile choice', s);
+      btn.addEventListener('click', () => {
+        if (s === missing) {
+          if (firstTry) score += 1;
+          message.textContent = pick(PRAISE);
+          message.className = 'game-message good';
+          choices.querySelectorAll('button').forEach((b) => { b.disabled = true; });
+          btn.classList.add('right');
+          stage.appendChild(button(round === ROUNDS ? 'Finish' : 'Next', 'btn secondary', nextRound));
+        } else {
+          firstTry = false;
+          btn.disabled = true;
+          btn.classList.add('wrong');
+          message.textContent = pick(RETRY);
+          message.className = 'game-message';
+        }
+      });
+      choices.appendChild(btn);
+    });
+    stage.appendChild(choices);
+    stage.appendChild(message);
+  }
+
+  start();
+</script>
+</body>
+</html>

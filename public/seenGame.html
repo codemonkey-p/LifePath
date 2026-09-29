@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>LifePath</title>
+<link rel="stylesheet" href="/css/style.css">
+<link rel="manifest" href="/manifest.json">
+</head>
+<body class="game-page">
+<div class="screen">
+  <div class="app-header">
+    <div class="logo">Did You See It?</div>
+    <div class="tagline" id="round-label"></div>
+  </div>
+  <div class="card" id="stage"></div>
+  <button class="btn outline" onclick="window.location.href='/games.html'">Back to Games</button>
+</div>
+
+<script src="/js/realtime-voice-client.js"></script>
+<script src="/js/app.js"></script>
+<script src="/js/game-kit.js"></script>
+<script>
+  const { ITEMS, PRAISE, RETRY, sample, shuffle, pick, el, button, showResult } = GameKit;
+  const SHOWN = 4;       // pictures to remember
+  const QUESTIONS = 4;   // 2 that were shown, 2 that were not
+  const stage = document.getElementById('stage');
+  const roundLabel = document.getElementById('round-label');
+  let score;
+
+  function start() {
+    score = 0;
+    const shown = sample(ITEMS, SHOWN);
+    const notShown = sample(ITEMS.filter((s) => !shown.includes(s)), QUESTIONS / 2);
+    const questions = shuffle([
+      ...sample(shown, QUESTIONS / 2).map((s) => ({ item: s, seen: true })),
+      ...notShown.map((s) => ({ item: s, seen: false }))
+    ]);
+
+    roundLabel.textContent = 'Remember these pictures';
+    stage.replaceChildren(el('p', 'game-prompt', 'Look at these pictures. Take your time - I will ask about them next.'));
+    const board = el('div', 'item-grid');
+    shown.forEach((s) => board.appendChild(el('div', 'item-tile', s)));
+    stage.appendChild(board);
+    stage.appendChild(button("I'm ready", 'btn', () => ask(questions, 0)));
+  }
+
+  function ask(questions, index) {
+    if (index >= questions.length) { roundLabel.textContent = ''; return showResult(stage, score, questions.length, start); }
+    const q = questions[index];
+    roundLabel.textContent = `Question ${index + 1} of ${questions.length}`;
+
+    stage.replaceChildren(el('p', 'game-prompt', 'Was this one in the pictures?'));
+    stage.appendChild(el('div', 'item-tile big', q.item));
+
+    const message = el('p', 'game-message', '');
+    const row = el('div', 'btn-row');
+    const answer = (said) => {
+      if (said === q.seen) {
+        score += 1;
+        message.textContent = pick(PRAISE);
+        message.className = 'game-message good';
+      } else {
+        message.textContent = q.seen ? 'It was there - that\'s okay!' : 'It wasn\'t there - that\'s okay!';
+        message.className = 'game-message';
+      }
+      // Swap Yes/No for Next so the page never grows taller.
+      row.replaceWith(button(index + 1 === questions.length ? 'Finish' : 'Next', 'btn outline', () => ask(questions, index + 1)));
+    };
+    row.appendChild(button('Yes', 'btn secondary', () => answer(true)));
+    row.appendChild(button('No', 'btn', () => answer(false)));
+    stage.appendChild(row);
+    stage.appendChild(message);
+  }
+
+  start();
+</script>
+</body>
+</html>

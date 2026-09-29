@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>LifePath</title>
+<link rel="stylesheet" href="/css/style.css">
+<link rel="manifest" href="/manifest.json">
+</head>
+<body>
+<div class="screen">
+  <div class="app-header">
+    <div class="logo">Tell Me About Yourself</div>
+    <div class="tagline">Just talk naturally - I'm listening</div>
+  </div>
+
+  <div class="card">
+    <div class="mic-indicator"><span class="mic-dot" id="w-dot"></span><span id="w-status">Connecting...</span></div>
+    <p class="error-text" id="w-error"></p>
+  </div>
+
+  <button class="btn secondary" id="w-pause-btn">Pause</button>
+  <button class="btn outline" id="w-done-btn">Done for now</button>
+</div>
+
+<script src="/js/realtime-voice-client.js"></script>
+<script src="/js/app.js"></script>
+<script>
+  const dot = document.getElementById('w-dot');
+  const status = document.getElementById('w-status');
+
+  const session = window.RealtimeVoice.connect({
+    path: '/ws/wizard',
+    onStatus: (s) => {
+      status.textContent = s === 'listening' ? "I'm listening..." : s === 'speaking' ? 'Speaking...' : s === 'thinking' ? 'Got it, one moment...' : s === 'paused' ? 'Paused - tap Resume when you\'re ready' : s;
+      dot.className = 'mic-dot' + (s === 'listening' ? ' listening' : s === 'speaking' || s === 'thinking' ? ' speaking' : '');
+    },
+    onConversationEnded: () => {
+      status.textContent = 'All done - taking you home...';
+      dot.className = 'mic-dot';
+      session.stop();
+      setTimeout(() => { window.location.href = '/home.html'; }, 600);
+    },
+    onError: (msg) => { document.getElementById('w-error').textContent = msg; }
+  });
+
+  const pauseBtn = document.getElementById('w-pause-btn');
+  pauseBtn.addEventListener('click', () => {
+    if (session.isPaused()) {
+      session.resume();
+      pauseBtn.textContent = 'Pause';
+    } else {
+      session.pause();
+      pauseBtn.textContent = 'Resume';
+    }
+  });
+
+  document.getElementById('w-done-btn').addEventListener('click', () => {
+    session.stop();
+    window.location.href = '/home.html';
+  });
+  window.addEventListener('beforeunload', () => session.stop());
+
+  fetch('/api/me').then((res) => res.ok ? res.json() : null).then((me) => {
+    if (me && !me.firstLoginCompleted) {
+      fetch('/api/wizard/first-login-complete', { method: 'POST' });
+    }
+  });
+</script>
+</body>
+</html>

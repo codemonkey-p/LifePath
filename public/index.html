@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>LifePath</title>
+<link rel="stylesheet" href="/css/style.css">
+<link rel="manifest" href="/manifest.json">
+<link rel="icon" href="/icons/icon.svg" type="image/svg+xml">
+</head>
+<body>
+<div class="screen">
+  <div class="app-header">
+    <div class="logo with-icon">
+      <img src="/icons/icon.svg" alt="" class="logo-icon">
+      <span><span class="life">Life</span><span class="path">Path</span></span>
+    </div>
+    <div class="tagline">Guiding You Through Each Day</div>
+  </div>
+
+  <div class="card">
+    <div class="btn-row" style="margin-bottom: 20px;">
+      <button class="btn" id="tab-login">Log In</button>
+      <button class="btn outline" id="tab-signup">Sign Up</button>
+    </div>
+
+    <form id="login-form">
+      <p class="form-hint">Log in to your existing account</p>
+      <label for="login-email">Email</label>
+      <input type="email" id="login-email" required>
+      <label for="login-password">Password</label>
+      <input type="password" id="login-password" required>
+      <p class="error-text" id="login-error"></p>
+      <button type="submit" class="btn secondary">Log In</button>
+    </form>
+
+    <form id="signup-form" hidden>
+      <p class="form-hint">Create a new account</p>
+      <label for="signup-name">Your Name</label>
+      <input type="text" id="signup-name" required>
+      <label for="signup-email">Email</label>
+      <input type="email" id="signup-email" required>
+      <label for="signup-password">Choose a Password</label>
+      <input type="password" id="signup-password" required>
+      <p class="error-text" id="signup-error"></p>
+      <button type="submit" class="btn secondary">Sign Up</button>
+    </form>
+  </div>
+</div>
+
+<script>
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.getRegistrations().then((regs) => regs.forEach((r) => r.unregister())).catch(() => {});
+  }
+  if ('caches' in window) {
+    caches.keys().then((keys) => keys.forEach((k) => caches.delete(k))).catch(() => {});
+  }
+
+  const loginForm = document.getElementById('login-form');
+  const signupForm = document.getElementById('signup-form');
+  const tabLogin = document.getElementById('tab-login');
+  const tabSignup = document.getElementById('tab-signup');
+
+  tabLogin.addEventListener('click', () => {
+    loginForm.hidden = false; signupForm.hidden = true;
+    tabLogin.classList.remove('outline'); tabSignup.classList.add('outline');
+  });
+  tabSignup.addEventListener('click', () => {
+    loginForm.hidden = true; signupForm.hidden = false;
+    tabSignup.classList.remove('outline'); tabLogin.classList.add('outline');
+  });
+
+  async function submitAuth({ url, body, errorElId, submitBtn, busyText }) {
+    const errorEl = document.getElementById(errorElId);
+    errorEl.textContent = '';
+    const originalText = submitBtn.textContent;
+    submitBtn.disabled = true;
+    submitBtn.textContent = busyText;
+
+    console.log(`[client-auth] submitting to ${url} with email="${body.email}" password length=${(body.password || '').length}`);
+
+    try {
+      const res = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body)
+      });
+      console.log(`[client-auth] response from ${url}: status=${res.status} ok=${res.ok}`);
+
+      let data;
+      try {
+        data = await res.json();
+      } catch (parseErr) {
+        console.log('[client-auth] failed to parse JSON response:', parseErr.message);
+        errorEl.textContent = 'The server sent back something unexpected. Please try again.';
+        return;
+      }
+      console.log('[client-auth] response body:', JSON.stringify(data));
+
+      if (!res.ok) {
+        console.log('[client-auth] request failed, showing error, NOT redirecting:', data.error);
+        errorEl.textContent = data.error || 'Something went wrong. Please try again.';
+        return;
+      }
+
+      console.log('[client-auth] success - redirecting to /home.html');
+      sessionStorage.setItem('lp_isNewUser', data.isNewUser ? '1' : '0');
+      window.location.href = '/home.html';
+    } catch (networkErr) {
+      console.log('[client-auth] network/fetch error:', networkErr.message);
+      errorEl.textContent = "Couldn't reach the server. Please check your connection and try again.";
+    } finally {
+      submitBtn.disabled = false;
+      submitBtn.textContent = originalText;
+    }
+  }
+
+  loginForm.addEventListener('submit', (e) => {
+    e.preventDefault();
+    submitAuth({
+      url: '/api/login',
+      body: {
+        email: document.getElementById('login-email').value,
+        password: document.getElementById('login-password').value
+      },
+      errorElId: 'login-error',
+      submitBtn: loginForm.querySelector('button[type="submit"]'),
+      busyText: 'Logging in...'
+    });
+  });
+
+  signupForm.addEventListener('submit', (e) => {
+    e.preventDefault();
+    submitAuth({
+      url: '/api/signup',
+      body: {
+        name: document.getElementById('signup-name').value,
+        email: document.getElementById('signup-email').value,
+        password: document.getElementById('signup-password').value
+      },
+      errorElId: 'signup-error',
+      submitBtn: signupForm.querySelector('button[type="submit"]'),
+      busyText: 'Signing up...'
+    });
+  });
+
+  fetch('/api/me').then((res) => { if (res.ok) window.location.href = '/home.html'; }).catch(() => {});
+</script>
+</body>
+</html>

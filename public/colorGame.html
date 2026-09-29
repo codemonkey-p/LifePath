@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>LifePath</title>
+<link rel="stylesheet" href="/css/style.css">
+<link rel="manifest" href="/manifest.json">
+</head>
+<body class="game-page">
+<div class="screen">
+  <div class="app-header">
+    <div class="logo">Follow the Colours</div>
+    <div class="tagline" id="round-label"></div>
+  </div>
+  <div class="card" id="stage">
+    <p class="game-prompt" id="prompt"></p>
+    <div class="color-pad" id="pad">
+      <button class="color-btn red" data-i="0" aria-label="Red"></button>
+      <button class="color-btn blue" data-i="1" aria-label="Blue"></button>
+      <button class="color-btn yellow" data-i="2" aria-label="Yellow"></button>
+      <button class="color-btn green" data-i="3" aria-label="Green"></button>
+    </div>
+    <p class="game-message" id="message"></p>
+    <div id="controls"></div>
+  </div>
+  <button class="btn outline" onclick="window.location.href='/games.html'">Back to Games</button>
+</div>
+
+<script src="/js/realtime-voice-client.js"></script>
+<script src="/js/app.js"></script>
+<script src="/js/game-kit.js"></script>
+<script>
+  const { PRAISE, button, showResult, pick } = GameKit;
+  // Sequence length per round: starts very short and grows gently.
+  const LENGTHS = [2, 2, 3, 3, 4];
+  const ROUNDS = LENGTHS.length;
+  const stage = document.getElementById('stage');
+  const promptEl = document.getElementById('prompt');
+  const messageEl = document.getElementById('message');
+  const controls = document.getElementById('controls');
+  const roundLabel = document.getElementById('round-label');
+  const buttons = [...document.querySelectorAll('.color-btn')];
+  let round, score, sequence, input, firstTry, watching;
+
+  function wait(ms) { return new Promise((r) => setTimeout(r, ms)); }
+
+  function setEnabled(on) { buttons.forEach((b) => { b.disabled = !on; }); }
+
+  async function flash(i) {
+    buttons[i].classList.add('lit');
+    await wait(700);
+    buttons[i].classList.remove('lit');
+    await wait(300);
+  }
+
+  function start() { round = 0; score = 0; nextRound(); }
+
+  function nextRound() {
+    round += 1;
+    if (round > ROUNDS) { roundLabel.textContent = ''; return finish(); }
+    roundLabel.textContent = `Round ${round} of ${ROUNDS}`;
+    sequence = Array.from({ length: LENGTHS[round - 1] }, () => Math.floor(Math.random() * 4));
+    firstTry = true;
+    watch();
+  }
+
+  function finish() {
+    // showResult() replaces the pad, so "Play again" simply reloads the page.
+    showResult(stage, score, ROUNDS, () => location.reload());
+  }
+
+  async function watch() {
+    watching = true;
+    input = [];
+    controls.replaceChildren();
+    messageEl.textContent = '';
+    messageEl.className = 'game-message';
+    promptEl.textContent = 'Watch the colours...';
+    setEnabled(false);
+    await wait(700);
+    for (const i of sequence) await flash(i);
+    watching = false;
+    promptEl.textContent = 'Now you! Tap the colours in the same order.';
+    setEnabled(true);
+  }
+
+  buttons.forEach((b) => b.addEventListener('click', async () => {
+    if (watching) return;
+    const i = Number(b.dataset.i);
+    input.push(i);
+    b.classList.add('lit');
+    setTimeout(() => b.classList.remove('lit'), 250);
+
+    const pos = input.length - 1;
+    if (input[pos] !== sequence[pos]) {
+      firstTry = false;
+      setEnabled(false);
+      messageEl.textContent = "Not quite - let's watch again";
+      await wait(1400);
+      watch();
+      return;
+    }
+    if (input.length === sequence.length) {
+      if (firstTry) score += 1;
+      setEnabled(false);
+      messageEl.textContent = pick(PRAISE);
+      messageEl.className = 'game-message good';
+      controls.replaceChildren(button(round === ROUNDS ? 'Finish' : 'Next', 'btn secondary', nextRound));
+    }
+  }));
+
+  start();
+</script>
+</body>
+</html>

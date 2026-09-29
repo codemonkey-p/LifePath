@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>LifePath</title>
+<link rel="stylesheet" href="/css/style.css">
+<link rel="manifest" href="/manifest.json">
+</head>
+<body class="game-page">
+<div class="screen">
+  <div class="app-header">
+    <div class="logo">Where Was It?</div>
+    <div class="tagline" id="round-label"></div>
+  </div>
+  <div class="card" id="stage"></div>
+  <button class="btn outline" onclick="window.location.href='/games.html'">Back to Games</button>
+</div>
+
+<script src="/js/realtime-voice-client.js"></script>
+<script src="/js/app.js"></script>
+<script src="/js/game-kit.js"></script>
+<script>
+  const { ITEMS, PRAISE, RETRY, sample, shuffle, pick, el, button, showResult } = GameKit;
+  const ROUNDS = 5;
+  const CELLS = 9; // 3 x 3 grid
+  const stage = document.getElementById('stage');
+  const roundLabel = document.getElementById('round-label');
+  let round, score;
+
+  function start() { round = 0; score = 0; nextRound(); }
+
+  function nextRound() {
+    round += 1;
+    if (round > ROUNDS) { roundLabel.textContent = ''; return showResult(stage, score, ROUNDS, start); }
+    roundLabel.textContent = `Round ${round} of ${ROUNDS}`;
+
+    // Rounds 1-2 hide one picture, later rounds hide two.
+    const count = round <= 2 ? 1 : 2;
+    const spots = sample([...Array(CELLS).keys()], count);
+    const pics = sample(ITEMS, count);
+    const placed = spots.map((cell, i) => ({ cell, pic: pics[i] }));
+
+    stage.replaceChildren(el('p', 'game-prompt', count === 1
+      ? 'Remember where the picture is.'
+      : 'Remember where the pictures are.'));
+    const board = el('div', 'where-grid');
+    for (let c = 0; c < CELLS; c++) {
+      const hit = placed.find((p) => p.cell === c);
+      board.appendChild(el('div', 'where-cell' + (hit ? ' shown' : ''), hit ? hit.pic : ''));
+    }
+    stage.appendChild(board);
+    stage.appendChild(button("I'm ready", 'btn', () => ask(placed, 0, true)));
+  }
+
+  function ask(placed, index, firstTry) {
+    if (index >= placed.length) return finishRound(firstTry);
+    const target = placed[index];
+
+    stage.replaceChildren(el('p', 'game-prompt', `Tap where the ${target.pic} was.`));
+    const board = el('div', 'where-grid');
+    const message = el('p', 'game-message', '');
+    let allFirst = firstTry;
+
+    for (let c = 0; c < CELLS; c++) {
+      const cell = el('button', 'where-cell hidden', '');
+      cell.addEventListener('click', () => {
+        if (c === target.cell) {
+          cell.textContent = target.pic;
+          cell.classList.remove('hidden');
+          cell.classList.add('shown', 'right');
+          board.querySelectorAll('button').forEach((b) => { b.disabled = true; });
+          message.textContent = pick(PRAISE);
+          message.className = 'game-message good';
+          const allDone = index + 1 >= placed.length;
+          stage.appendChild(button(allDone ? (round === ROUNDS ? 'Finish' : 'Next') : 'Next picture', 'btn secondary',
+            () => ask(placed, index + 1, allFirst)));
+        } else {
+          allFirst = false;
+          cell.disabled = true;
+          cell.classList.add('wrong');
+          message.textContent = pick(RETRY);
+          message.className = 'game-message';
+        }
+      });
+      board.appendChild(cell);
+    }
+    stage.appendChild(board);
+    stage.appendChild(message);
+  }
+
+  function finishRound(firstTry) {
+    if (firstTry) score += 1;
+    nextRound();
+  }
+
+  start();
+</script>
+</body>
+</html>

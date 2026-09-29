@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>LifePath</title>
+<link rel="stylesheet" href="/css/style.css">
+<link rel="manifest" href="/manifest.json">
+</head>
+<body>
+<div class="screen">
+  <div class="app-header"><div class="logo">Shopping List</div></div>
+
+  <div class="card">
+    <h3 style="margin-top:0; color: var(--blue-deep);">Add something</h3>
+    <input type="text" id="item-input" placeholder="What do you need to buy?" autocomplete="off">
+    <select id="item-place"></select>
+    <button class="btn" id="add-item-btn">Add to list</button>
+    <p class="hint-text">Or tap <strong>Companion</strong> and just say "add milk to my list".</p>
+    <p class="error-text" id="add-error" style="min-height:0; margin:0;"></p>
+  </div>
+
+  <div class="card">
+    <h3 style="margin-top:0; color: var(--blue-deep);">To buy</h3>
+    <p class="hint-text">In the order you added them - oldest first.</p>
+    <div id="open-items"></div>
+  </div>
+
+  <div class="card">
+    <h3 style="margin-top:0; color: var(--blue-deep);">My stores</h3>
+    <p class="hint-text">Save a store's location while you're there, and I'll remind you of your list when you arrive. (Works while the app is open.)</p>
+    <div id="places"></div>
+    <p class="error-text" id="place-message" style="min-height:0;"></p>
+    <input type="text" id="place-input" placeholder="Add a store, e.g. Kroger" autocomplete="off" style="margin-top:12px;">
+    <button class="btn outline" id="add-place-btn">Add store</button>
+  </div>
+
+  <div class="card" id="bought-card" hidden>
+    <details>
+      <summary style="font-weight:700; color: var(--blue-deep); cursor:pointer;" id="bought-summary">Already bought</summary>
+      <div id="done-items" style="margin-top:8px;"></div>
+    </details>
+  </div>
+
+  <button class="btn outline" onclick="window.location.href='/home.html'">Back to Home</button>
+</div>
+
+<script src="/js/realtime-voice-client.js"></script>
+<script src="/js/app.js"></script>
+<script>
+  let state = { places: [], items: [] };
+
+  function esc(text) {
+    const div = document.createElement('div');
+    div.textContent = text == null ? '' : String(text);
+    return div.innerHTML;
+  }
+
+  async function api(method, url, body) {
+    const res = await fetch(url, {
+      method,
+      headers: body ? { 'Content-Type': 'application/json' } : undefined,
+      body: body ? JSON.stringify(body) : undefined
+    });
+    if (res.status === 401) { window.location.href = '/index.html'; return null; }
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data.error || 'Something went wrong.');
+    return data;
+  }
+
+  async function load() {
+    const res = await fetch('/api/shopping');
+    if (!res.ok) { window.location.href = '/index.html'; return; }
+    state = await res.json();
+    render();
+  }
+
+  function itemRow(i) {
+    const added = new Date(i.createdAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+    return `
+      <div class="shop-row ${i.done ? 'done' : ''}">
+        <button class="shop-check" data-toggle="${i.id}" aria-label="${i.done ? 'Mark as not bought' : 'Mark as bought'}">${i.done ? '&#10003;' : ''}</button>
+        <div class="shop-info">
+          <div class="shop-text">${esc(i.item)}</div>
+          <div class="shop-meta">${i.placeName ? `<span class="shop-badge">${esc(i.placeName)}</span>` : ''}Added ${esc(added)}</div>
+        </div>
+        <button class="shop-remove" data-remove="${i.id}" aria-label="Remove">&times;</button>
+      </div>`;
+  }
+
+  function render() {
+    const open = state.items.filter((i) => !i.done);
+    const done = state.items.filter((i) => i.done);
+
+    document.getElementById('open-items').innerHTML =
+      open.length ? open.map(itemRow).join('') : '<p class="hint-text">Nothing on your list yet.</p>';
+
+    const boughtCard = document.getElementById('bought-card');
+    boughtCard.hidden = done.length === 0;
+    document.getElementById('bought-summary').textContent = `Already bought (${done.length})`;
+    document.getElementById('done-items').innerHTML = done.map(itemRow).join('');
+
+    const select = document.getElementById('item-place');
+    const previous = select.value;
+    select.innerHTML = '<option value="">Any store</option>' +
+      state.places.map((p) => `<option value="${esc(p.id)}">${esc(p.name)}</option>`).join('');
+    select.value = state.places.some((p) => p.id === previous) ? previous : '';
+
+    document.getElementById('places').innerHTML = state.places.length
+      ? state.places.map((p) => `
+          <div class="shop-row">
+            <div class="shop-info">
+              <div class="shop-text">${esc(p.name)}</div>
+              <div class="shop-meta">${p.lat != null ? 'Location saved &#10003;' : 'Location not saved yet'}</div>
+              <div style="display:flex; gap:8px; flex-wrap:wrap; margin-top:8px;">
+                <button class="small-btn green" data-locate="${p.id}">Set location here</button>
+                <button class="small-btn" data-preview="${p.id}">Preview reminder</button>
+              </div>
+            </div>
+            <button class="shop-remove" data-remove-place="${p.id}" aria-label="Remove store">&times;</button>
+          </div>`).join('')
+      : '<p class="hint-text">No stores yet. Add one below, or tell me about yourself and mention where you shop.</p>';
+  }
+
+  function setPlaceMessage(text) {
+    document.getElementById('place-message').textContent = text || '';
+  }
+
+  document.addEventListener('click', async (e) => {
+    const target = e.target.closest('button');
+    if (!target) return;
+    try {
+      if (target.dataset.toggle) {
+        const item = state.items.find((i) => i.id === target.dataset.toggle);
+        await api('PATCH', `/api/shopping/items/${item.id}`, { done: !item.done });
+        await load();
+      } else if (target.dataset.remove) {
+        await api('DELETE', `/api/shopping/items/${target.dataset.remove}`);
+        await load();
+      } else if (target.dataset.removePlace) {
+        await api('DELETE', `/api/shopping/places/${target.dataset.removePlace}`);
+        await load();
+      } else if (target.dataset.locate) {
+        setPlaceMessage('');
+        if (!navigator.geolocation) { setPlaceMessage("This device can't share its location."); return; }
+        setPlaceMessage('Finding your location...');
+        navigator.geolocation.getCurrentPosition(
+          async (pos) => {
+            try {
+              await api('PUT', `/api/shopping/places/${target.dataset.locate}/location`, {
+                lat: pos.coords.latitude,
+                lng: pos.coords.longitude
+              });
+              setPlaceMessage('');
+              await load();
+            } catch (err) { setPlaceMessage(err.message); }
+          },
+          (err) => {
+            setPlaceMessage(
+              err.code === 1
+                ? 'Location is blocked. Please allow location for this app and try again.'
+                : "Couldn't find your location. GPS works best on a phone, while you're at the store."
+            );
+          },
+          { enableHighAccuracy: true, timeout: 20000, maximumAge: 0 }
+        );
+      } else if (target.dataset.preview) {
+        setPlaceMessage('');
+        const shown = await window.LifePathApp.showArrivalReminder(target.dataset.preview);
+        if (!shown) setPlaceMessage('Nothing on your list for this store yet - add something first.');
+      }
+    } catch (err) {
+      setPlaceMessage(err.message);
+    }
+  });
+
+  document.getElementById('add-item-btn').addEventListener('click', async () => {
+    const input = document.getElementById('item-input');
+    const errorEl = document.getElementById('add-error');
+    errorEl.textContent = '';
+    try {
+      await api('POST', '/api/shopping/items', { item: input.value, placeId: document.getElementById('item-place').value || null });
+      input.value = '';
+      await load();
+    } catch (err) { errorEl.textContent = err.message; }
+  });
+  document.getElementById('item-input').addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') document.getElementById('add-item-btn').click();
+  });
+
+  document.getElementById('add-place-btn').addEventListener('click', async () => {
+    const input = document.getElementById('place-input');
+    setPlaceMessage('');
+    try {
+      await api('POST', '/api/shopping/places', { name: input.value });
+      input.value = '';
+      await load();
+    } catch (err) { setPlaceMessage(err.message); }
+  });
+
+  load();
+</script>
+</body>
+</html>

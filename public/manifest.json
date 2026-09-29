@@ -1,0 +1,13 @@
+{
+  "name": "LifePath",
+  "short_name": "LifePath",
+  "description": "Guiding You Through Each Day",
+  "start_url": "/home.html",
+  "display": "standalone",
+  "background_color": "#eef7f6",
+  "theme_color": "#1c7ed6",
+  "orientation": "portrait",
+  "icons": [
+    { "src": "/icons/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }
+  ]
+}

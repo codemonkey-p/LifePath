@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>LifePath</title>
+<link rel="stylesheet" href="/css/style.css">
+<link rel="manifest" href="/manifest.json">
+</head>
+<body class="game-page">
+<div class="screen">
+  <div class="app-header">
+    <div class="logo">Matching Game</div>
+    <div class="tagline">Tap two cards to find a matching pair</div>
+  </div>
+  <div class="card">
+    <div class="match-grid" id="match-grid"></div>
+    <p class="game-message good" id="match-status"></p>
+  </div>
+  <button class="btn outline" onclick="window.location.href='/games.html'">Back to Games</button>
+</div>
+
+<script src="/js/realtime-voice-client.js"></script>
+<script src="/js/app.js"></script>
+<script>
+  const symbols = ['🌼','🌞','🐦','🍎','🎵','🏡'];
+  const deck = [...symbols, ...symbols].sort(() => Math.random() - 0.5);
+  const grid = document.getElementById('match-grid');
+  const statusEl = document.getElementById('match-status');
+  let first = null, second = null, lock = false, matches = 0;
+
+  deck.forEach((symbol, i) => {
+    const card = document.createElement('div');
+    card.className = 'match-card hidden-face';
+    card.dataset.symbol = symbol;
+    card.dataset.index = i;
+    card.textContent = '';
+    card.addEventListener('click', () => flip(card));
+    grid.appendChild(card);
+  });
+
+  function flip(card) {
+    if (lock || card.classList.contains('matched') || card === first) return;
+    card.classList.remove('hidden-face');
+    card.textContent = card.dataset.symbol;
+
+    if (!first) { first = card; return; }
+    second = card;
+    lock = true;
+
+    if (first.dataset.symbol === second.dataset.symbol) {
+      first.classList.add('matched');
+      second.classList.add('matched');
+      matches += 1;
+      resetTurn();
+      if (matches === symbols.length) {
+        statusEl.textContent = 'You matched them all! Great job!';
+      }
+    } else {
+      setTimeout(() => {
+        first.classList.add('hidden-face');
+        first.textContent = '';
+        second.classList.add('hidden-face');
+        second.textContent = '';
+        resetTurn();
+      }, 900);
+    }
+  }
+
+  function resetTurn() {
+    first = null; second = null; lock = false;
+  }
+</script>
+</body>
+</html>

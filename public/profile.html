@@ -1,0 +1,297 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>LifePath</title>
+<link rel="stylesheet" href="/css/style.css">
+<link rel="manifest" href="/manifest.json">
+</head>
+<body>
+<div class="screen">
+  <div class="app-header"><div class="logo">Your Profile</div></div>
+
+  <div class="card" id="facts-card"></div>
+  <div class="card">
+    <h3 style="margin-top:0; color: var(--blue-deep);">Medications</h3>
+    <div id="med-list"></div>
+
+    <form class="med-add" id="med-form">
+      <label for="med-name">Add a medication</label>
+      <input type="text" id="med-name" placeholder="Medication name" maxlength="100" autocomplete="off" required>
+      <div class="med-add-row">
+        <div>
+          <label for="med-time">Time</label>
+          <input type="time" id="med-time">
+        </div>
+        <div>
+          <label for="med-schedule">Schedule</label>
+          <select id="med-schedule">
+            <option>Every day</option>
+            <option>Every other day</option>
+            <option>Weekdays</option>
+            <option>Weekends</option>
+            <option>Once a week</option>
+            <option>Only when needed</option>
+          </select>
+        </div>
+      </div>
+      <p class="error-text" id="med-error"></p>
+      <button type="submit" class="btn secondary">Add Medication</button>
+    </form>
+  </div>
+  <div class="card">
+    <h3 style="margin-top:0; color: var(--blue-deep);">Family</h3>
+    <div id="family-list"></div>
+
+    <form class="med-add" id="family-form">
+      <label for="fam-name">Add a family member</label>
+      <input type="text" id="fam-name" placeholder="Name" maxlength="100" autocomplete="off" required>
+      <input type="text" id="fam-relation" placeholder="Relationship (e.g. son, wife)" maxlength="50" autocomplete="off">
+      <label>Birthday (optional)</label>
+      <div class="med-add-row">
+        <div>
+          <select id="fam-month" aria-label="Birthday month">
+            <option value="">Month</option>
+            <option value="01">January</option><option value="02">February</option><option value="03">March</option>
+            <option value="04">April</option><option value="05">May</option><option value="06">June</option>
+            <option value="07">July</option><option value="08">August</option><option value="09">September</option>
+            <option value="10">October</option><option value="11">November</option><option value="12">December</option>
+          </select>
+        </div>
+        <div>
+          <select id="fam-day" aria-label="Birthday day">
+            <option value="">Day</option>
+          </select>
+        </div>
+      </div>
+      <input type="text" id="fam-year" placeholder="Year (optional)" inputmode="numeric" maxlength="4" autocomplete="off">
+      <p class="error-text" id="fam-error"></p>
+      <button type="submit" class="btn secondary">Add Family Member</button>
+    </form>
+  </div>
+  <div class="card">
+    <h3 style="margin-top:0; color: var(--blue-deep);">About</h3>
+    <div class="biography-text" id="biography"></div>
+  </div>
+
+  <div class="card">
+    <h3 style="margin-top:0; color: var(--emergency-red);">Start Over</h3>
+    <p style="color: var(--text-muted); font-size: 15px;">This clears everything saved about you - your answers, reminders, family, and photos - and starts fresh, as if you just signed up. Your login stays the same.</p>
+    <button class="btn emergency" id="reset-btn">Reset My Information</button>
+  </div>
+
+  <button class="btn outline" onclick="window.location.href='/home.html'">Back to Home</button>
+</div>
+
+<script src="/js/realtime-voice-client.js"></script>
+<script src="/js/app.js"></script>
+<script>
+  function esc(text) {
+    const el = document.createElement('div');
+    el.textContent = text;
+    return el.innerHTML;
+  }
+
+  function row(label, value) {
+    return `<p><strong>${label}:</strong> ${value || '<em>not yet known</em>'}</p>`;
+  }
+
+  // Birthdays are "YYYY-MM-DD" or "MM-DD"; parsed by hand so time zones can't shift the day.
+  function formatBirthday(value) {
+    const m = String(value || '').match(/^(?:(\d{4})-)?(\d{1,2})-(\d{1,2})$/);
+    if (!m) return '';
+    const months = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+    return `${months[parseInt(m[2], 10) - 1]} ${parseInt(m[3], 10)}`;
+  }
+
+  async function load() {
+    const res = await fetch('/api/profile');
+    if (!res.ok) { window.location.href = '/index.html'; return; }
+    const data = await res.json();
+    const p = data.profile;
+
+    document.getElementById('facts-card').innerHTML = `
+      <h3 style="margin-top:0; color: var(--blue-deep);">${data.name}</h3>
+      ${row('Preferred name', p.preferredName)}
+      ${row('Email', data.email)}
+      ${row('Condition', p.condition)}
+      ${row('Doctor appointment timing', p.doctorAppointmentTiming)}
+      ${row('Doctor / caretaker', p.doctorOrCaretakerName)}
+      ${row('Emergency contact', p.emergencyContact ? `${p.emergencyContact.name} (${p.emergencyContact.phone})` : null)}
+      ${row('Where I shop', (p.shoppingPlaces || []).map(s => s.name).join(', '))}
+    `;
+
+    const familyList = document.getElementById('family-list');
+    familyList.innerHTML = '';
+    (p.family || []).forEach((member) => {
+      const rowEl = document.createElement('div');
+      rowEl.className = 'family-member-row';
+      rowEl.innerHTML = `
+        <img class="family-photo" src="${member.photoFilename ? '/api/profile/family/' + member.id + '/photo' : ''}" onerror="this.style.visibility='hidden'">
+        <div class="family-info">
+          <strong>${esc(member.name)}</strong><br>
+          <span style="color: var(--text-muted); font-size: 15px;">${esc(member.relation || '')}${member.birthday ? (member.relation ? ' - ' : '') + 'Birthday: ' + formatBirthday(member.birthday) : ''}</span>
+        </div>
+        <input type="file" accept="image/*" style="display:none" id="file-${member.id}">
+        <button class="browse-btn" data-id="${member.id}">Browse</button>
+      `;
+      familyList.appendChild(rowEl);
+
+      rowEl.querySelector('.browse-btn').addEventListener('click', () => {
+        document.getElementById(`file-${member.id}`).click();
+      });
+      rowEl.querySelector(`#file-${member.id}`).addEventListener('change', async (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+        const formData = new FormData();
+        formData.append('photo', file);
+        await fetch(`/api/profile/family/${member.id}/photo`, { method: 'POST', body: formData });
+        load();
+      });
+    });
+    if ((p.family || []).length === 0) {
+      familyList.innerHTML = '<p style="color: var(--text-muted);">No family members added yet.</p>';
+    }
+
+    document.getElementById('biography').textContent = data.biography || 'Nothing recorded yet - try "Tell me about yourself".';
+  }
+
+  // "14:30" from the time picker -> "2:30 PM"; anything else (e.g. "8am" from the voice wizard) is shown as is.
+  function formatTime(value) {
+    const m = String(value || '').match(/^(\d{1,2}):(\d{2})$/);
+    if (!m) return value || '';
+    const h = parseInt(m[1], 10);
+    return `${h % 12 || 12}:${m[2]} ${h < 12 ? 'AM' : 'PM'}`;
+  }
+
+  async function loadMedications() {
+    const res = await fetch('/api/profile/medications');
+    if (!res.ok) return;
+    const { medications } = await res.json();
+    const list = document.getElementById('med-list');
+    list.innerHTML = '';
+
+    if (medications.length === 0) {
+      list.innerHTML = '<p style="color: var(--text-muted);">No medications added yet.</p>';
+      return;
+    }
+
+    medications.forEach((med) => {
+      const rowEl = document.createElement('div');
+      rowEl.className = 'med-row';
+
+      const line = document.createElement('div');
+      line.className = 'med-line';
+      const name = document.createElement('strong');
+      name.textContent = med.name;
+      const when = document.createElement('span');
+      when.className = 'med-when';
+      const parts = [formatTime(med.time), med.schedule].filter(Boolean);
+      when.textContent = parts.length ? ' - ' + parts.join(', ') : '';
+      line.append(name, when);
+      line.title = name.textContent + when.textContent;
+
+      const remove = document.createElement('button');
+      remove.type = 'button';
+      remove.className = 'med-remove';
+      remove.textContent = '✕';
+      remove.setAttribute('aria-label', `Remove ${med.name}`);
+      remove.addEventListener('click', async () => {
+        remove.disabled = true;
+        await fetch(`/api/profile/medications/${med.id}`, { method: 'DELETE' });
+        loadMedications();
+      });
+
+      rowEl.append(line, remove);
+      list.appendChild(rowEl);
+    });
+  }
+
+  document.getElementById('med-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const errorEl = document.getElementById('med-error');
+    errorEl.textContent = '';
+    const nameInput = document.getElementById('med-name');
+    const timeInput = document.getElementById('med-time');
+    try {
+      const res = await fetch('/api/profile/medications', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: nameInput.value,
+          time: formatTime(timeInput.value),
+          schedule: document.getElementById('med-schedule').value
+        })
+      });
+      const data = await res.json();
+      if (!res.ok) { errorEl.textContent = data.error || 'Something went wrong. Please try again.'; return; }
+      nameInput.value = '';
+      timeInput.value = '';
+      loadMedications();
+    } catch (err) {
+      errorEl.textContent = "Couldn't reach the server. Please try again.";
+    }
+  });
+
+  const daySelect = document.getElementById('fam-day');
+  for (let d = 1; d <= 31; d++) daySelect.add(new Option(d, String(d).padStart(2, '0')));
+
+  document.getElementById('family-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const errorEl = document.getElementById('fam-error');
+    errorEl.textContent = '';
+    const month = document.getElementById('fam-month').value;
+    const day = daySelect.value;
+    const year = document.getElementById('fam-year').value.trim();
+
+    if ((month && !day) || (!month && day)) { errorEl.textContent = 'Please choose both the month and the day.'; return; }
+    if (year && !month) { errorEl.textContent = 'Please choose the month and day too, or clear the year.'; return; }
+    if (year && !/^(19|20)\d{2}$/.test(year)) { errorEl.textContent = 'Please type the year with 4 digits, like 1985.'; return; }
+
+    const birthday = month ? (year ? `${year}-${month}-${day}` : `${month}-${day}`) : '';
+    try {
+      const res = await fetch('/api/profile/family', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: document.getElementById('fam-name').value,
+          relation: document.getElementById('fam-relation').value,
+          birthday
+        })
+      });
+      const data = await res.json();
+      if (!res.ok) { errorEl.textContent = data.error || 'Something went wrong. Please try again.'; return; }
+      e.target.reset();
+      load();
+    } catch (err) {
+      errorEl.textContent = "Couldn't reach the server. Please try again.";
+    }
+  });
+
+  load();
+  loadMedications();
+
+  document.getElementById('reset-btn').addEventListener('click', async () => {
+    const confirmed = confirm(
+      "This will permanently delete everything saved about you - your name, condition, medications, family, photos, and reminders - and start over as a new user. This can't be undone. Continue?"
+    );
+    if (!confirmed) return;
+
+    const btn = document.getElementById('reset-btn');
+    btn.disabled = true;
+    btn.textContent = 'Resetting...';
+
+    try {
+      const res = await fetch('/api/profile/reset', { method: 'POST' });
+      if (!res.ok) throw new Error('Reset failed');
+      window.location.href = '/home.html';
+    } catch (err) {
+      btn.disabled = false;
+      btn.textContent = 'Reset My Information';
+      alert("Something went wrong resetting your information. Please try again.");
+    }
+  });
+</script>
+</body>
+</html>

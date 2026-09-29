@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>LifePath</title>
+<link rel="stylesheet" href="/css/style.css">
+<link rel="manifest" href="/manifest.json">
+</head>
+<body>
+<div class="screen">
+  <div class="app-header"><div class="logo">Quick Quiz</div></div>
+
+  <div class="card" style="text-align:center;">
+    <img id="quiz-photo" src="" alt="" style="display:none; width: 140px; height: 140px; border-radius: 50%; object-fit: cover; margin-bottom: 16px;">
+    <div class="mic-indicator"><span class="mic-dot" id="q-dot"></span><span id="q-status">Getting started...</span></div>
+    <p class="transcript-line" id="q-question"></p>
+  </div>
+
+  <button class="btn outline" id="q-back" onclick="window.location.href='/brainExercises.html'">Back to Brain Exercises</button>
+</div>
+
+<script src="/js/voice-client.js"></script>
+<script src="/js/realtime-voice-client.js"></script>
+<script src="/js/app.js"></script>
+<script>
+  let sessionId = null;
+  const dot = document.getElementById('q-dot');
+  const status = document.getElementById('q-status');
+  const questionEl = document.getElementById('q-question');
+  const photoEl = document.getElementById('quiz-photo');
+
+  function showPhoto(url) {
+    if (url) { photoEl.src = url; photoEl.style.display = 'block'; }
+    else { photoEl.style.display = 'none'; }
+  }
+
+  function playThenListen(audioBase64, text) {
+    questionEl.textContent = text;
+    status.textContent = 'Speaking...';
+    dot.className = 'mic-dot speaking';
+    window.VoiceClient.playAudioBase64(audioBase64, 'audio/mpeg', () => listen());
+  }
+
+  async function listen() {
+    status.textContent = "I'm listening...";
+    dot.className = 'mic-dot listening';
+    const blob = await window.VoiceClient.recordUntilSilence();
+    if (!blob) return;
+    status.textContent = 'Thinking...';
+    dot.className = 'mic-dot';
+
+    const formData = new FormData();
+    formData.append('sessionId', sessionId);
+    formData.append('audio', blob, 'answer.webm');
+    const res = await fetch('/api/quiz/turn', { method: 'POST', body: formData });
+    const data = await res.json();
+    showPhoto(data.photoUrl);
+
+    if (data.done) {
+      playThenListenFinal(data.audioBase64, data.responseText);
+    } else {
+      playThenListen(data.audioBase64, data.responseText);
+    }
+  }
+
+  function playThenListenFinal(audioBase64, text) {
+    questionEl.textContent = text;
+    status.textContent = 'Speaking...';
+    window.VoiceClient.playAudioBase64(audioBase64, 'audio/mpeg', () => {
+      status.textContent = 'Quiz finished!';
+      const back = document.getElementById('q-back');
+      back.classList.remove('outline');
+      back.classList.add('secondary');
+    });
+  }
+
+  async function start() {
+    const res = await fetch('/api/quiz/start', { method: 'POST' });
+    const data = await res.json();
+    sessionId = data.sessionId;
+    showPhoto(data.photoUrl);
+    playThenListen(data.audioBase64, data.question);
+  }
+
+  start();
+</script>
+</body>
+</html>
