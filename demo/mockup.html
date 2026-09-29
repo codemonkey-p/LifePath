@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>LifePath Demo</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="bezel.css">
+</head>
+<body>
+  <div class="phone-bezel">
+    <div class="side-button power"></div>
+    <div class="volume-button up"></div>
+    <div class="volume-button down"></div>
+    <div class="phone-screen">
+      <div class="status-bar">
+        <span id="clock">9:41</span>
+        <span class="status-icons">
+          <span class="signal-bars"><span></span><span></span><span></span><span></span></span>
+          <span class="battery-icon">
+            <span class="battery-body"><span class="battery-fill"></span></span>
+            <span class="battery-tip"></span>
+          </span>
+        </span>
+      </div>
+      <div class="dynamic-island"></div>
+
+      <div class="home-screen" id="home-screen">
+        <div class="icon-grid">
+          <div class="app-icon" data-fake="true">
+            <div class="glyph" style="background:linear-gradient(160deg,#3a3a3d,#1c1c1e);">
+              <svg viewBox="0 0 24 24" fill="none"><rect x="2" y="6" width="20" height="14" rx="3" fill="white"/><rect x="8" y="3" width="8" height="4" rx="1.5" fill="white"/><circle cx="12" cy="13" r="4.2" fill="#3a3a3d"/><circle cx="12" cy="13" r="2.5" fill="#8e8e93"/></svg>
+            </div>
+            <div class="label">Camera</div>
+          </div>
+          <div class="app-icon" data-fake="true">
+            <div class="glyph" style="background:linear-gradient(160deg,#9a9aa0,#6c6c70);">
+              <svg viewBox="0 0 24 24" fill="none">
+                <g fill="white">
+                  <rect x="10.8" y="1.3" width="2.4" height="4.2" rx="1"/>
+                  <rect x="10.8" y="1.3" width="2.4" height="4.2" rx="1" transform="rotate(45 12 12)"/>
+                  <rect x="10.8" y="1.3" width="2.4" height="4.2" rx="1" transform="rotate(90 12 12)"/>
+                  <rect x="10.8" y="1.3" width="2.4" height="4.2" rx="1" transform="rotate(135 12 12)"/>
+                  <rect x="10.8" y="1.3" width="2.4" height="4.2" rx="1" transform="rotate(180 12 12)"/>
+                  <rect x="10.8" y="1.3" width="2.4" height="4.2" rx="1" transform="rotate(225 12 12)"/>
+                  <rect x="10.8" y="1.3" width="2.4" height="4.2" rx="1" transform="rotate(270 12 12)"/>
+                  <rect x="10.8" y="1.3" width="2.4" height="4.2" rx="1" transform="rotate(315 12 12)"/>
+                  <circle cx="12" cy="12" r="6.2"/>
+                </g>
+                <circle cx="12" cy="12" r="3" fill="#8e8e93"/>
+              </svg>
+            </div>
+            <div class="label">Settings</div>
+          </div>
+          <div class="app-icon" data-fake="true">
+            <div class="glyph" style="background:white;">
+              <svg viewBox="0 0 24 24" fill="none">
+                <circle cx="12" cy="7.5" r="5" fill="#ffcc00"/>
+                <circle cx="6.8" cy="15.5" r="5" fill="#ff375f"/>
+                <circle cx="17.2" cy="15.5" r="5" fill="#5e5ce6"/>
+                <circle cx="12" cy="13" r="3.4" fill="white"/>
+              </svg>
+            </div>
+            <div class="label">Photos</div>
+          </div>
+          <div class="app-icon" data-fake="true">
+            <div class="glyph" style="background:#1c1c1e;">
+              <svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="9.5" fill="white"/><path d="M12 6.5v6l4 2.2" stroke="#1c1c1e" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </div>
+            <div class="label">Clock</div>
+          </div>
+          <div class="app-icon" data-fake="true">
+            <div class="glyph" style="background:white; position:relative;">
+              <svg viewBox="0 0 24 24" fill="none"><rect x="2" y="2" width="20" height="5" fill="#ff3b30"/><rect x="2" y="7" width="20" height="15" fill="white"/><text x="12" y="18" font-size="10" font-weight="700" fill="#1c1c1e" text-anchor="middle">17</text></svg>
+            </div>
+            <div class="label">Calendar</div>
+          </div>
+          <div class="app-icon" data-fake="true">
+            <div class="glyph" style="background:#fdf3d8;">
+              <svg viewBox="0 0 24 24" fill="none"><rect x="3" y="3" width="18" height="18" rx="2" fill="#fffdf5"/><line x1="6" y1="8" x2="18" y2="8" stroke="#d8ccaa" stroke-width="1.3"/><line x1="6" y1="12" x2="18" y2="12" stroke="#d8ccaa" stroke-width="1.3"/><line x1="6" y1="16" x2="14" y2="16" stroke="#d8ccaa" stroke-width="1.3"/></svg>
+            </div>
+            <div class="label">Notes</div>
+          </div>
+          <div class="app-icon" data-fake="true">
+            <div class="glyph" style="background:linear-gradient(160deg,#4fc3f7,#1976d2);">
+              <svg viewBox="0 0 24 24" fill="none"><circle cx="10" cy="10" r="4.5" fill="#ffd54f"/><path d="M4 19c1.5-3 4-4 8-4s6.5 1 8 4" fill="white" opacity="0.95"/></svg>
+            </div>
+            <div class="label">Weather</div>
+          </div>
+          <div class="app-icon" id="lifepath-icon">
+            <div class="glyph"><img src="../public/icons/icon.svg" alt="LifePath"></div>
+            <div class="label">LifePath</div>
+          </div>
+        </div>
+
+        <div class="dock">
+          <div class="app-icon" data-fake="true">
+            <div class="glyph" style="background:linear-gradient(160deg,#65c466,#2ea043);">
+              <svg viewBox="0 0 24 24" fill="none"><path d="M6.6 10.8c1.4 2.8 3.8 5.1 6.6 6.6l2.2-2.2c.3-.3.7-.4 1-.2 1.1.4 2.3.6 3.5.6.6 0 1 .4 1 1V20c0 .6-.4 1-1 1C10.6 21 3 13.4 3 4c0-.6.4-1 1-1h3.5c.6 0 1 .4 1 1 0 1.2.2 2.4.6 3.5.1.3 0 .7-.2 1l-2.3 2.3z" fill="white"/></svg>
+            </div>
+          </div>
+          <div class="app-icon" data-fake="true">
+            <div class="glyph" style="background:linear-gradient(160deg,#63e56b,#12b34c);">
+              <svg viewBox="0 0 24 24" fill="none"><path d="M4 5h16a1 1 0 011 1v10a1 1 0 01-1 1H10l-4.5 3.5A0.6 0.6 0 014.5 20V17H4a1 1 0 01-1-1V6a1 1 0 011-1z" fill="white"/></svg>
+            </div>
+          </div>
+          <div class="app-icon" data-fake="true">
+            <div class="glyph" style="background:linear-gradient(160deg,#5ac8fa,#1976d2);">
+              <svg viewBox="0 0 24 24" fill="none"><rect x="2.5" y="5" width="19" height="14" rx="2.2" fill="white"/><path d="M3.5 6.5l8.5 6 8.5-6" stroke="#1976d2" stroke-width="1.4" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </div>
+          </div>
+          <div class="app-icon" data-fake="true">
+            <div class="glyph" style="background:white;">
+              <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" fill="#f0f0f0" stroke="#e0e0e0"/><path d="M15.5 8.5l-2.2 5.2-5.2 2.2 2.2-5.2z" fill="#ff3b30"/><path d="M15.5 8.5l-2.2 5.2-3-3z" fill="#e0e0e0"/></svg>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="app-frame-wrap" id="app-frame-wrap">
+        <iframe id="app-frame" src="about:blank" allow="microphone; autoplay; clipboard-write; geolocation"></iframe>
+      </div>
+    </div>
+  </div>
+  <script>
+    const params = new URLSearchParams(location.search);
+    const port = params.get('port') || 3000;
+
+    const homeScreen = document.getElementById('home-screen');
+    const frameWrap = document.getElementById('app-frame-wrap');
+    const iframe = document.getElementById('app-frame');
+
+    const NATIVE_WIDTH = 393;
+    function applyIframeScale() {
+      const scale = frameWrap.clientWidth / NATIVE_WIDTH;
+      iframe.style.transform = `scale(${scale})`;
+      // Let the app fill the bezel's full height (no leftover strip at the bottom).
+      iframe.style.height = `${frameWrap.clientHeight / scale}px`;
+    }
+
+    // The app can ask for a light or dark status bar (e.g. white text on the dark call screen).
+    window.addEventListener('message', (event) => {
+      if (event.origin !== `http://localhost:${port}` || !event.data || !event.data.lifepathStatusBar) return;
+      document.querySelector('.status-bar').classList.toggle('dark', event.data.lifepathStatusBar === 'dark');
+    });
+    applyIframeScale();
+    window.addEventListener('resize', applyIframeScale);
+
+    document.getElementById('lifepath-icon').addEventListener('click', () => {
+      if (iframe.src === 'about:blank') iframe.src = `http://localhost:${port}/`;
+      homeScreen.classList.add('hidden');
+      frameWrap.classList.add('open');
+      document.querySelector('.status-bar').classList.add('dark');
+    });
+
+    document.querySelectorAll('.app-icon[data-fake="true"]').forEach((el) => {
+      el.addEventListener('click', () => {
+        el.classList.add('bump');
+        setTimeout(() => el.classList.remove('bump'), 150);
+      });
+    });
+
+    function updateClock() {
+      const now = new Date();
+      let h = now.getHours();
+      const m = now.getMinutes().toString().padStart(2, '0');
+      const ampm = h >= 12 ? 'PM' : 'AM';
+      h = h % 12 || 12;
+      document.getElementById('clock').textContent = `${h}:${m}`;
+    }
+    updateClock();
+    setInterval(updateClock, 15000);
+  </script>
+</body>
+</html>
