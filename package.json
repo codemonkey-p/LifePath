@@ -1,0 +1,29 @@
+{
+  "name": "lifepath",
+  "version": "1.0.0",
+  "description": "Voice-first PWA for Alzheimer's and Parkinson's patients",
+  "type": "commonjs",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "nodemon server.js",
+    "demo": "electron electron/main.js"
+  },
+  "dependencies": {
+    "bcrypt": "^5.1.1",
+    "cookie": "^0.6.0",
+    "cookie-parser": "^1.4.6",
+    "cookie-signature": "^1.2.1",
+    "dotenv": "^16.4.5",
+    "express": "^4.19.2",
+    "lowdb": "^1.0.0",
+    "multer": "^1.4.5-lts.1",
+    "openai": "^4.52.0",
+    "uuid": "^11.1.0",
+    "ws": "^8.17.0"
+  },
+  "devDependencies": {
+    "electron": "^30.0.0",
+    "nodemon": "^3.1.0"
+  }
+}
